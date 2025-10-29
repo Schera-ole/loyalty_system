@@ -224,7 +224,7 @@ func (storage *DBStorage) SpendPoints(ctx context.Context, orderWithdrawal model
 	}
 
 	// Check if user has sufficient balance
-	if float64(orderWithdrawal.Sum) > currentBalance {
+	if orderWithdrawal.Sum > currentBalance {
 		return apperrors.ErrInsufficientFunds
 	}
 
@@ -234,7 +234,7 @@ func (storage *DBStorage) SpendPoints(ctx context.Context, orderWithdrawal model
 		SET balance = balance - $1, total_spent = total_spent + $1, updated_at = NOW()
 		WHERE user_id = $2
 	`
-	_, err = tx.ExecContext(ctx, updateBalanceQuery, float64(orderWithdrawal.Sum), userID)
+	_, err = tx.ExecContext(ctx, updateBalanceQuery, orderWithdrawal.Sum, userID)
 	if err != nil {
 		return fmt.Errorf("error updating user balance: %w", err)
 	}
@@ -244,7 +244,7 @@ func (storage *DBStorage) SpendPoints(ctx context.Context, orderWithdrawal model
 		INSERT INTO loyalty_transactions (user_id, order_number, points, transaction_type, processed_at)
 		VALUES ($1, $2, $3, 'spend', NOW())
 	`
-	_, err = tx.ExecContext(ctx, insertTransactionQuery, userID, orderWithdrawal.Order, float64(orderWithdrawal.Sum))
+	_, err = tx.ExecContext(ctx, insertTransactionQuery, userID, orderWithdrawal.Order, orderWithdrawal.Sum)
 	if err != nil {
 		return fmt.Errorf("error creating loyalty transaction: %w", err)
 	}

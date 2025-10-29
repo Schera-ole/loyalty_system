@@ -318,10 +318,10 @@ func GetBalanceHandler(w http.ResponseWriter, r *http.Request, logger *zap.Sugar
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	// Convert int values to float as per specification
+	// Balance is already float64 from database
 	response := map[string]float64{
-		"current":   float64(balance.Balance),
-		"withdrawn": float64(balance.TotalSpent),
+		"current":   balance.Balance,
+		"withdrawn": balance.TotalSpent,
 	}
 	json.NewEncoder(w).Encode(response)
 }
@@ -345,9 +345,12 @@ func WithdrawPointsHandler(w http.ResponseWriter, r *http.Request, logger *zap.S
 	var withdrawal model.Withdrawal
 	if err := json.Unmarshal(body, &withdrawal); err != nil {
 		logger.Errorw("Failed to decode withdrawal request", "username", username, "error", err)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		http.Error(w, "Invalid request body format", http.StatusBadRequest)
 		return
 	}
+
+	// Log the parsed withdrawal for debugging
+	logger.Debugw("Parsed withdrawal request", "username", username, "order", withdrawal.Order, "sum", withdrawal.Sum)
 
 	// Validate input
 	if withdrawal.Order == "" || withdrawal.Sum <= 0 {
