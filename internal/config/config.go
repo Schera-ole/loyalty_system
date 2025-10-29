@@ -16,7 +16,7 @@ type SystemConfig struct {
 func NewSystemConfig() (*SystemConfig, error) {
 	config := &SystemConfig{
 		RunAddress:     "localhost:8080",
-		DatabaseURI:    "postgresql://xxx:xxx@localhost:5432/loyalty_system?sslmode=disable",
+		DatabaseURI:    "postgresql://schera:schera@localhost:5432/loyalty_system?sslmode=disable",
 		AccrualAddress: "localhost:8088",
 		JwtSecretKey:   "random_secret_key",
 		JwtAlgorithm:   "HS256",

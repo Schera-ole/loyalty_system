@@ -181,6 +181,19 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request, logger *zap.SugaredLo
 		return
 	}
 
+	// Set Authorization header with Bearer token
+	w.Header().Set("Authorization", "Bearer "+tokenString)
+
+	// Also set the token as a cookie for additional compatibility
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	// Return successful response with token
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -234,6 +247,19 @@ func SignInHandler(w http.ResponseWriter, r *http.Request, logger *zap.SugaredLo
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+
+	// Set Authorization header with Bearer token
+	w.Header().Set("Authorization", "Bearer "+tokenString)
+
+	// Also set the token as a cookie for additional compatibility
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, // Set to true in production with HTTPS
+		SameSite: http.SameSiteLaxMode,
+	})
 
 	// Return the token
 	w.Header().Set("Content-Type", "application/json")
