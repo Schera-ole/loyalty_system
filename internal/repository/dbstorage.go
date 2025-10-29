@@ -314,11 +314,57 @@ func (storage *DBStorage) UpdateOrderStatus(ctx context.Context, orderNumber str
 
 // UpdateOrderStatusAndAccrual updates the status and accrual of an order
 func (storage *DBStorage) UpdateOrderStatusAndAccrual(ctx context.Context, orderNumber string, status string, accrual *float64) error {
-	query := "UPDATE orders SET status = $1, accrual = $2, updated_at = NOW() WHERE order_number = $3"
-	_, err := storage.db.ExecContext(ctx, query, status, accrual, orderNumber)
+	tx, err := storage.db.Begin()
+	if err != nil {
+		return fmt.Errorf("can't start transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	// Get user ID for the order
+	var userID string
+	getUserQuery := "SELECT user_id FROM orders WHERE order_number = $1"
+	err = tx.QueryRowContext(ctx, getUserQuery, orderNumber).Scan(&userID)
+	if err != nil {
+		return fmt.Errorf("error getting user ID for order: %w", err)
+	}
+
+	// Update order status and accrual
+	updateOrderQuery := "UPDATE orders SET status = $1, accrual = $2, updated_at = NOW() WHERE order_number = $3"
+	_, err = tx.ExecContext(ctx, updateOrderQuery, status, accrual, orderNumber)
 	if err != nil {
 		return fmt.Errorf("error updating order status and accrual: %w", err)
 	}
+
+	// If order is processed with accrual, update user balance and create transaction
+	if status == "PROCESSED" && accrual != nil && *accrual > 0 {
+		// Update user balance
+		updateBalanceQuery := `
+			UPDATE user_balance 
+			SET balance = balance + $1, updated_at = NOW() 
+			WHERE user_id = $2
+		`
+		_, err = tx.ExecContext(ctx, updateBalanceQuery, *accrual, userID)
+		if err != nil {
+			return fmt.Errorf("error updating user balance: %w", err)
+		}
+
+		// Create loyalty transaction record for earned points
+		insertTransactionQuery := `
+			INSERT INTO loyalty_transactions (user_id, order_number, points, transaction_type, processed_at)
+			VALUES ($1, $2, $3, 'earn', NOW())
+		`
+		_, err = tx.ExecContext(ctx, insertTransactionQuery, userID, orderNumber, *accrual)
+		if err != nil {
+			return fmt.Errorf("error creating loyalty transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
