@@ -54,7 +54,7 @@ func (storage *DBStorage) SetUser(ctx context.Context, user model.User) error {
 		return apperrors.ErrUserAlreadyExists
 	}
 
-	password_hash, err := auth.HashPassword(user.Password)
+	passwordHash, err := auth.HashPassword(user.Password)
 	if err != nil {
 		return apperrors.ErrPasswordHashing
 	}
@@ -62,7 +62,7 @@ func (storage *DBStorage) SetUser(ctx context.Context, user model.User) error {
 	// Insert user
 	query := "INSERT INTO users (username, password_hash, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING id"
 	var userID string
-	err = tx.QueryRowContext(ctx, query, user.Username, password_hash).Scan(&userID)
+	err = tx.QueryRowContext(ctx, query, user.Username, passwordHash).Scan(&userID)
 	if err != nil {
 		return fmt.Errorf("error saving user: %w", err)
 	}
