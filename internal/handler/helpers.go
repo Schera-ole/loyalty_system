@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -51,4 +52,37 @@ func HandleDecompression(r *http.Request) ([]byte, error) {
 	}
 
 	return processData, nil
+}
+
+func isIntegerAtoi(s string) bool {
+	_, err := strconv.Atoi(s)
+	return err == nil
+}
+
+// isValidLuhn validates a number using the Luhn algorithm
+func isValidLuhn(number string) bool {
+
+	if !isIntegerAtoi(number) {
+		return false
+	}
+
+	sum := 0
+	doubleDigit := false
+
+	// Process from right to left
+	for i := len(number) - 1; i >= 0; i-- {
+		digit := int(number[i] - '0')
+
+		if doubleDigit {
+			digit *= 2
+			if digit > 9 {
+				digit = digit - 9
+			}
+		}
+
+		sum += digit
+		doubleDigit = !doubleDigit
+	}
+
+	return sum%10 == 0
 }
