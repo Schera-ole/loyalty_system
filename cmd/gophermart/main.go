@@ -26,7 +26,7 @@ func main() {
 	logSugar := logger.Sugar()
 
 	// Initialize database storage
-	dbStorage, err := repository.NewDBStorage(systemConfig.DatabaseUri)
+	dbStorage, err := repository.NewDBStorage(systemConfig.DatabaseURI)
 	if err != nil {
 		log.Fatal("Failed to connect to database: ", err)
 	}
@@ -44,7 +44,7 @@ func main() {
 		"Starting server",
 		"run address", systemConfig.RunAddress,
 		"accural system address", systemConfig.AccrualAddress,
-		"database", systemConfig.DatabaseUri,
+		"database", systemConfig.DatabaseURI,
 	)
 	logSugar.Fatal(
 		http.ListenAndServe(

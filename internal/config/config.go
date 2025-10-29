@@ -7,7 +7,7 @@ import (
 
 type SystemConfig struct {
 	RunAddress     string
-	DatabaseUri    string
+	DatabaseURI    string
 	AccrualAddress string
 	JwtSecretKey   string
 	JwtAlgorithm   string
@@ -16,14 +16,14 @@ type SystemConfig struct {
 func NewSystemConfig() (*SystemConfig, error) {
 	config := &SystemConfig{
 		RunAddress:     "localhost:8080",
-		DatabaseUri:    "postgresql://xxx:xxx@localhost:5432/loyalty_system?sslmode=disable",
+		DatabaseURI:    "postgresql://xxx:xxx@localhost:5432/loyalty_system?sslmode=disable",
 		AccrualAddress: "localhost:8088",
 		JwtSecretKey:   "random_secret_key",
 		JwtAlgorithm:   "HS256",
 	}
 
 	address := flag.String("a", config.RunAddress, "address")
-	database := flag.String("d", config.DatabaseUri, "database uri")
+	database := flag.String("d", config.DatabaseURI, "database uri")
 	accural := flag.String("r", config.AccrualAddress, "accural system address")
 
 	envVars := map[string]*string{
@@ -38,7 +38,7 @@ func NewSystemConfig() (*SystemConfig, error) {
 		}
 	}
 	config.RunAddress = *address
-	config.DatabaseUri = *database
+	config.DatabaseURI = *database
 	config.AccrualAddress = *accural
 
 	return config, nil
