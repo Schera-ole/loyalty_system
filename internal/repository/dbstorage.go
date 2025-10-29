@@ -313,7 +313,7 @@ func (storage *DBStorage) UpdateOrderStatus(ctx context.Context, orderNumber str
 }
 
 // UpdateOrderStatusAndAccrual updates the status and accrual of an order
-func (storage *DBStorage) UpdateOrderStatusAndAccrual(ctx context.Context, orderNumber string, status string, accrual *int) error {
+func (storage *DBStorage) UpdateOrderStatusAndAccrual(ctx context.Context, orderNumber string, status string, accrual *float64) error {
 	query := "UPDATE orders SET status = $1, accrual = $2, updated_at = NOW() WHERE order_number = $3"
 	_, err := storage.db.ExecContext(ctx, query, status, accrual, orderNumber)
 	if err != nil {

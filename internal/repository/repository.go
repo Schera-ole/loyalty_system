@@ -11,7 +11,7 @@ type Repository interface {
 	CheckUser(ctx context.Context, user model.User) (bool, error)
 	AddOrder(ctx context.Context, username string, orderNumber string) error
 	UpdateOrderStatus(ctx context.Context, orderNumber string, status string) error
-	UpdateOrderStatusAndAccrual(ctx context.Context, orderNumber string, status string, accrual *int) error
+	UpdateOrderStatusAndAccrual(ctx context.Context, orderNumber string, status string, accrual *float64) error
 	GetOrders(ctx context.Context, username string) ([]model.Order, error)
 	GetUserBalance(ctx context.Context, username string) (model.UserBalance, error)
 	GetWithdrawals(ctx context.Context, username string) ([]model.Withdrawal, error)

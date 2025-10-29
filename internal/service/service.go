@@ -53,7 +53,7 @@ func (lss *LoyaltySystemService) UpdateOrderStatus(ctx context.Context, orderNum
 	return lss.repo.UpdateOrderStatus(ctx, orderNumber, status)
 }
 
-func (lss *LoyaltySystemService) UpdateOrderStatusAndAccrual(ctx context.Context, orderNumber string, status string, accrual *int) error {
+func (lss *LoyaltySystemService) UpdateOrderStatusAndAccrual(ctx context.Context, orderNumber string, status string, accrual *float64) error {
 	return lss.repo.UpdateOrderStatusAndAccrual(ctx, orderNumber, status, accrual)
 }
 
