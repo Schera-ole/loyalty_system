@@ -1,0 +1,37 @@
+package model
+
+import "time"
+
+type User struct {
+	Username string `json:"login"`
+	Password string `json:"password"`
+}
+
+type Order struct {
+	Number     string    `json:"number"`
+	Status     string    `json:"status"`
+	Accrual    *int      `json:"accrual,omitempty"`
+	UploadedAt time.Time `json:"uploaded_at"`
+}
+
+type UserBalance struct {
+	Balance    float64 `json:"current"`
+	TotalSpent float64 `json:"withdrawn"`
+}
+
+type Withdrawal struct {
+	Order       string    `json:"order"`
+	Sum         int       `json:"sum"`
+	ProcessedAt time.Time `json:"processed_at"`
+}
+type OrderWithdrawal struct {
+	User  *string `json:"user,omitempty"`
+	Order string  `json:"order"`
+	Sum   int     `json:"sum"`
+}
+
+type AccrualResponse struct {
+	Order   string `json:"order"`
+	Status  string `json:"status"`
+	Accrual *int   `json:"accrual,omitempty"`
+}
