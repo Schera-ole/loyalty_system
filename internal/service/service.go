@@ -57,17 +57,14 @@ func (lss *LoyaltySystemService) UpdateOrderStatusAndAccrual(ctx context.Context
 	return lss.repo.UpdateOrderStatusAndAccrual(ctx, orderNumber, status, accrual)
 }
 
-// PollOrderStatus polls the external accrual system for order status until it reaches a final state
-// Final states are: PROCESSED (with optional accrual) and INVALID
-// Intermediate states are: NEW and PROCESSING
-// The function uses a goroutine to avoid blocking the main thread and polls every 5 seconds
-// When receiving a 429 (Too Many Requests) response, it respects the Retry-After header or waits 30 seconds
 func (lss *LoyaltySystemService) PollOrderStatus(ctx context.Context, orderNumber string, accrualAddress string) {
 	go func() {
-		// Create a new context for the polling goroutine to avoid cancellation from parent context
-		pollCtx := context.Background()
+		timeout := 2 * time.Minute
+		var cancel context.CancelFunc
+		pollCtx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
 
-		ticker := time.NewTicker(5 * time.Second) // Poll every 5 seconds
+		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
 
 		for {
@@ -78,14 +75,12 @@ func (lss *LoyaltySystemService) PollOrderStatus(ctx context.Context, orderNumbe
 				accrualURL := accrualAddress + "/api/orders/" + orderNumber
 				resp, err := http.Get(accrualURL)
 				if err != nil {
-					// Log error but continue polling
 					if lss.logger != nil {
 						lss.logger.Errorw("Error making request to accrual system", "error", err, "order", orderNumber)
 					}
 					continue
 				}
 
-				// Parse response to get status
 				var accrualResponse model.AccrualResponse
 				switch resp.StatusCode {
 				case http.StatusOK:
@@ -98,45 +93,39 @@ func (lss *LoyaltySystemService) PollOrderStatus(ctx context.Context, orderNumbe
 					}
 					resp.Body.Close()
 
-					// Log successful response
 					if lss.logger != nil {
 						lss.logger.Infow("Received accrual response", "order", orderNumber, "status", accrualResponse.Status)
 					}
 
 					// Check if status is final
 					if accrualResponse.Status == "PROCESSED" || accrualResponse.Status == "INVALID" {
-						// If processed with accrual, update both status and accrual
 						if accrualResponse.Status == "PROCESSED" && accrualResponse.Accrual != nil {
 							// Update both status and accrual
-							if err := lss.UpdateOrderStatusAndAccrual(pollCtx, orderNumber, accrualResponse.Status, accrualResponse.Accrual); err != nil {
-								// Log error but continue
+							if err := lss.UpdateOrderStatusAndAccrual(ctx, orderNumber, accrualResponse.Status, accrualResponse.Accrual); err != nil {
 								if lss.logger != nil {
 									lss.logger.Errorw("Error updating order status and accrual", "error", err, "order", orderNumber)
 								}
 							}
 						} else {
-							// Update only status (for INVALID or PROCESSED without accrual)
-							if err := lss.UpdateOrderStatus(pollCtx, orderNumber, accrualResponse.Status); err != nil {
-								// Log error but continue
+							// Update only status (for INVALID or PROCESSED)
+							if err := lss.UpdateOrderStatus(ctx, orderNumber, accrualResponse.Status); err != nil {
 								if lss.logger != nil {
 									lss.logger.Errorw("Error updating order status", "error", err, "order", orderNumber)
 								}
 							}
 						}
 
-						// Log final status
 						if lss.logger != nil {
 							lss.logger.Infow("Order reached final status", "order", orderNumber, "status", accrualResponse.Status)
 						}
 
-						return // Exit the polling loop as we reached a final state
+						return
 					}
 
-					// For non-final statuses (NEW, PROCESSING), continue polling
+					// For non-final statuses continue polling
 					continue
 
 				case http.StatusNoContent:
-					// Order not registered yet in accrual system, continue polling
 					resp.Body.Close()
 					if lss.logger != nil {
 						lss.logger.Debugw("Order not registered in accrual system yet", "order", orderNumber)
@@ -144,8 +133,8 @@ func (lss *LoyaltySystemService) PollOrderStatus(ctx context.Context, orderNumbe
 					continue
 
 				case http.StatusTooManyRequests:
-					// Rate limited, respect Retry-After header or wait 30 seconds
-					retryAfter := 30 * time.Second // Default fallback
+					// Rate limited
+					retryAfter := 30 * time.Second
 					if retryAfterHeader := resp.Header.Get("Retry-After"); retryAfterHeader != "" {
 						if seconds, err := strconv.Atoi(retryAfterHeader); err == nil {
 							retryAfter = time.Duration(seconds) * time.Second
@@ -161,7 +150,7 @@ func (lss *LoyaltySystemService) PollOrderStatus(ctx context.Context, orderNumbe
 					continue
 
 				default:
-					// Unexpected response, log and continue polling
+					// Unexpected response, log and continue
 					if lss.logger != nil {
 						lss.logger.Errorw("Unexpected response from accrual system", "statusCode", resp.StatusCode, "order", orderNumber)
 					}

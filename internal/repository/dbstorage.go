@@ -45,7 +45,7 @@ func (storage *DBStorage) SetUser(ctx context.Context, user model.User) error {
 		}
 	}()
 
-	// Check if user already exists before attempting to create
+	// Check if user already exists
 	exists, err := storage.checkUserExists(ctx, tx, user.Username)
 	if err != nil {
 		return fmt.Errorf("error checking user existence: %w", err)
@@ -59,7 +59,7 @@ func (storage *DBStorage) SetUser(ctx context.Context, user model.User) error {
 		return apperrors.ErrPasswordHashing
 	}
 
-	// Insert user
+	// Insert user if not
 	query := "INSERT INTO users (username, password_hash, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING id"
 	var userID string
 	err = tx.QueryRowContext(ctx, query, user.Username, passwordHash).Scan(&userID)
@@ -83,7 +83,7 @@ func (storage *DBStorage) CheckUser(ctx context.Context, user model.User) (bool,
 		return false, apperrors.ErrInvalidCredentials
 	}
 
-	// Check if user exists and get password hash in a single query
+	// Check if user exists and get password hash
 	var storedHash string
 	query := "SELECT password_hash FROM users WHERE username = $1"
 	err := storage.db.QueryRowContext(ctx, query, user.Username).Scan(&storedHash)
@@ -208,7 +208,6 @@ func (storage *DBStorage) SpendPoints(ctx context.Context, orderWithdrawal model
 		}
 	}()
 
-	// Get user ID and current balance
 	queryUserBalance := `
 		SELECT u.id, ub.balance
 		FROM user_balance ub
@@ -252,7 +251,6 @@ func (storage *DBStorage) SpendPoints(ctx context.Context, orderWithdrawal model
 	return nil
 }
 
-// AddOrder adds a new order for a user
 func (storage *DBStorage) AddOrder(ctx context.Context, username string, orderNumber string) error {
 	tx, err := storage.db.Begin()
 	if err != nil {
@@ -282,7 +280,7 @@ func (storage *DBStorage) AddOrder(ctx context.Context, username string, orderNu
 	checkOrderQuery := "SELECT user_id FROM orders WHERE order_number = $1"
 	err = tx.QueryRowContext(ctx, checkOrderQuery, orderNumber).Scan(&existingUserID)
 	if err == nil {
-		// Order exists, check if it's for the same user
+		// Check if order exists for the same user
 		if existingUserID == userID {
 			return apperrors.ErrOrderAlreadyExists
 		}
@@ -302,7 +300,6 @@ func (storage *DBStorage) AddOrder(ctx context.Context, username string, orderNu
 	return nil
 }
 
-// UpdateOrderStatus updates the status of an order
 func (storage *DBStorage) UpdateOrderStatus(ctx context.Context, orderNumber string, status string) error {
 	query := "UPDATE orders SET status = $1, updated_at = NOW() WHERE order_number = $2"
 	_, err := storage.db.ExecContext(ctx, query, status, orderNumber)
@@ -312,7 +309,6 @@ func (storage *DBStorage) UpdateOrderStatus(ctx context.Context, orderNumber str
 	return nil
 }
 
-// UpdateOrderStatusAndAccrual updates the status and accrual of an order
 func (storage *DBStorage) UpdateOrderStatusAndAccrual(ctx context.Context, orderNumber string, status string, accrual *float64) error {
 	tx, err := storage.db.Begin()
 	if err != nil {
@@ -341,9 +337,8 @@ func (storage *DBStorage) UpdateOrderStatusAndAccrual(ctx context.Context, order
 		return fmt.Errorf("error updating order status and accrual: %w", err)
 	}
 
-	// If order is processed with accrual, update user balance and create transaction
+	// If order is processed and accural, update user balance and create transaction
 	if status == "PROCESSED" && accrual != nil && *accrual > 0 {
-		// Update user balance
 		updateBalanceQuery := `
 			UPDATE user_balance 
 			SET balance = balance + $1, updated_at = NOW() 
@@ -354,7 +349,6 @@ func (storage *DBStorage) UpdateOrderStatusAndAccrual(ctx context.Context, order
 			return fmt.Errorf("error updating user balance: %w", err)
 		}
 
-		// Create loyalty transaction record for earned points
 		insertTransactionQuery := `
 			INSERT INTO loyalty_transactions (user_id, order_number, points, transaction_type, processed_at)
 			VALUES ($1, $2, $3, 'earn', NOW())
@@ -368,12 +362,10 @@ func (storage *DBStorage) UpdateOrderStatusAndAccrual(ctx context.Context, order
 	return nil
 }
 
-// Ping checks if the database connection is alive
 func (storage *DBStorage) Ping(ctx context.Context) error {
 	return storage.db.PingContext(ctx)
 }
 
-// Check if user has already existed
 func (storage *DBStorage) checkUserExists(ctx context.Context, tx *sql.Tx, username string) (bool, error) {
 	var exists bool
 	query := "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)"
