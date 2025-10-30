@@ -101,14 +101,14 @@ func (lss *LoyaltySystemService) PollOrderStatus(ctx context.Context, orderNumbe
 					if accrualResponse.Status == "PROCESSED" || accrualResponse.Status == "INVALID" {
 						if accrualResponse.Status == "PROCESSED" && accrualResponse.Accrual != nil {
 							// Update both status and accrual
-							if err := lss.UpdateOrderStatusAndAccrual(ctx, orderNumber, accrualResponse.Status, accrualResponse.Accrual); err != nil {
+							if err := lss.UpdateOrderStatusAndAccrual(pollCtx, orderNumber, accrualResponse.Status, accrualResponse.Accrual); err != nil {
 								if lss.logger != nil {
 									lss.logger.Errorw("Error updating order status and accrual", "error", err, "order", orderNumber)
 								}
 							}
 						} else {
 							// Update only status (for INVALID or PROCESSED)
-							if err := lss.UpdateOrderStatus(ctx, orderNumber, accrualResponse.Status); err != nil {
+							if err := lss.UpdateOrderStatus(pollCtx, orderNumber, accrualResponse.Status); err != nil {
 								if lss.logger != nil {
 									lss.logger.Errorw("Error updating order status", "error", err, "order", orderNumber)
 								}
